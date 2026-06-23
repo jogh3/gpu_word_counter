@@ -1,2 +1,2 @@
-# gpu_word_counter
+# gpu word counter
 a program that counts words using a gpu
