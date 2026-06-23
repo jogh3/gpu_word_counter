@@ -1,0 +1,22 @@
+#/usr/bin/env bash
+
+dict_loc="/usr/share/dict/words"
+mapfile -t dict_arr < <(cat $dict_loc)
+dict_len=$(wc -l $dict_loc)
+dict_len=${dict_len%% *}
+exec 3< /dev/urandom
+
+file_size=0
+max_size=1073741824
+file_name="word_file.txt"
+
+for (( i = 0; $file_size < $max_size; i++ )); do
+  randomnum=$(( 0x$(head -c 3 <&3 | xxd -p) ))
+  wordnum=$(( $randomnum % $dict_len ))
+  echo -n "${dict_arr[wordnum]} " >> $file_name
+  file_size=$( stat $file_name --format=%s )
+  echo -ne "\r\e[2Kprinting $i word; curr size is $file_size"
+  #wordnum= modulus operation by dict_len to ensure within the bounds
+done
+
+exec 3<&-
