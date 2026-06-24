@@ -16,7 +16,7 @@ void split_check(long *start, data_struct *data){
     if (data->data[i] == ' '){
       int size_difference = data->arr_size - i;
       if (start != NULL) {
-          *start -= size_difference; 
+          *start -= size_difference+1; 
       }
       data->arr_size = i+1;
       char *temp = realloc(data->data, data->arr_size);
@@ -42,7 +42,9 @@ data_struct get_file_data(FILE *fptr, cl_ulong vram_size, long *start, long f_si
   }
   data.data = malloc(data.arr_size);
   fread(data.data, sizeof(char), data.arr_size,fptr);
-  split_check(start, &data);
+  if (*start != f_size){
+    split_check(start, &data);
+  }
   return data;
 }
 
@@ -66,7 +68,7 @@ int main(int argc,char* argv[]){
   long start_pos = 0;
   while (start_pos < f_size){
     data_struct data = get_file_data(fptr, available_vram, &start_pos ,f_size);
-    printf("%.*s", 100, data.data); //(int)data.arr_size
+    printf("%.*s", data.arr_size, data.data);
     // gpu exection
     free(data.data);
   }
