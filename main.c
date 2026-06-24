@@ -16,7 +16,7 @@ void split_check(long *start, data_struct *data){
     if (data->data[i] == ' '){
       int size_difference = data->arr_size - i;
       if (start != NULL) {
-          *start -= size_difference+1; 
+          *start -= size_difference-1; 
       }
       data->arr_size = i+1;
       char *temp = realloc(data->data, data->arr_size);
