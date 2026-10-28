@@ -1,0 +1,3 @@
+!#/usr/bin/env bash
+
+yes "the quick brown fox jumps over the lazy dog chauffeuring" | head -c 1073741824 > random_words.txt
