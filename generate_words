@@ -1,22 +1,82 @@
-#/usr/bin/env bash
+#!/usr/bin/env bash
+
+validate-ascii() {
+	local s=$1
+  local LC_ALL=C
+  local s_len=${#s}
+
+  local i
+  for (( i = 0; i < s_len; i++ )); do
+    local byte
+    printf -v byte '%d' "'${s:i:1}"
+    if (( (byte & 2#10000000) != 0 )); then
+      return 69
+    fi
+  done
+	return 0
+}
+
+convert_to_human() {
+    # is in bytes
+    local size=$1
+    local precision=10
+    readable_size=0
+    unit=""
+    if (( size >= 1073741824 )); then
+        # Multiply by 10 first to save one decimal place of precision
+        local scaled=$(( size * $precision / 1073741824 ))
+        # Extract the whole number and the decimal remainder
+        local int=$(( scaled / $precision ))
+        local dec=$(( scaled % $precision ))
+        readable_size="${int}.${dec}"
+        unit="GiB"
+    elif (( size >= 1048576)); then
+        local scaled=$(( size * $precision / 1048576 ))
+        local int=$(( scaled / $precision ))
+        local dec=$(( scaled % $precision ))
+        readable_size="${int}.${dec}"
+        unit="MiB"
+    elif (( size >= 1024 )); then
+      local scaled=$(( size * precision / 1024 ))
+      local int=$(( scaled / $precision ))
+      local dec=$(( scaled % $precision ))
+      readable_size="${int}.${dec}"
+      unit="KiB"
+    else 
+      readable_size="${size}"
+      unit="B"
+    fi
+}
+
 
 dict_loc="/usr/share/dict/words"
-mapfile -t dict_arr < <(cat $dict_loc)
-dict_len=$(wc -l $dict_loc)
-dict_len=${dict_len%% *}
-exec 3< /dev/urandom
+mapfile -t dict_arr < "$dict_loc"
+dict_len=${#dict_arr[@]}
 
 file_size=0
-max_size=1073741824
+max_size=1073741824 #1GiB
 file_name="word_file.txt"
 
+> "$file_name"
+echo "starting generation"
 for (( i = 0; $file_size < $max_size; i++ )); do
-  randomnum=$(( 0x$(head -c 3 <&3 | xxd -p) ))
-  wordnum=$(( $randomnum % $dict_len ))
-  echo -n "${dict_arr[wordnum]} " >> $file_name
-  file_size=$( stat $file_name --format=%s )
-  echo -ne "\r\e[2Kprinting $i word; curr size is $file_size"
+  randomnum=$(( ( (RANDOM << 15) | RANDOM) % dict_len ))
+  dict_word=${dict_arr[randomnum]}
+
+  validate-ascii $dict_word
+  if (( $? == 69 )); then
+    continue
+  fi
+
+  printf '%s' "$dict_word " >> $file_name
+
+  file_size=$(stat "$file_name" --format=%s)
+
+  convert_to_human $file_size
+
+  if (( i % 1 == 0 )); then
+    printf "\r\e[2Kprinting %d word; curr size is %s" "$i" "$readable_size$unit"
+  fi
   #wordnum= modulus operation by dict_len to ensure within the bounds
 done
 
-exec 3<&-
